@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: devbrain-backend
+    runtime: node
+    repo: https://github.com/YOUR_USERNAME/devbrain-ai
+    branch: main
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: FRONTEND_URL
+        value: https://devbrain-ai.vercel.app
+    healthCheckPath: /api/health
+    plan: free
