@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(mkdir:*)",
+      "Bash(npm install)",
+      "Bash(chmod:*)",
+      "Bash(tree:*)",
+      "Bash(npm test)",
+      "Bash(npm run type-check:*)",
+      "Bash(find:*)",
+      "Bash(npm install:*)",
+      "Bash(docker:*)",
+      "Bash(npm run start:dev:*)",
+      "Bash(mv:*)",
+      "Bash(npm run dev:*)",
+      "Bash(start-no-docker.bat)",
+      "Bash(cmd.exe /c start-no-docker.bat)",
+      "Bash(copy .env.sqlite .env)",
+      "Bash(cp:*)",
+      "Bash(node:*)",
+      "Bash(curl:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(rm:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
