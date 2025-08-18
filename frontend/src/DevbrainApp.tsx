@@ -133,7 +133,8 @@ function DevbrainApp() {
     setIsLoading(true);
     
     try {
-      const response = await fetch('http://localhost:3002/api/ai/chat', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3002';
+      const response = await fetch(`${apiUrl}/api/ai/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

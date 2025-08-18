@@ -236,7 +236,8 @@ const DevbrainMVI = () => {
     
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:3002/api/mvi/start', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3002';
+      const response = await fetch(`${apiUrl}/api/mvi/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ idea: input })
@@ -270,7 +271,8 @@ const DevbrainMVI = () => {
     
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:3002/api/mvi/continue', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3002';
+      const response = await fetch(`${apiUrl}/api/mvi/continue`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId, response: input })
@@ -308,7 +310,8 @@ const DevbrainMVI = () => {
     
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:3002/api/mvi/export', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3002';
+      const response = await fetch(`${apiUrl}/api/mvi/export`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId, format })
