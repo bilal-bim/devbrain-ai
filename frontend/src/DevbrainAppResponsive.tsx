@@ -461,9 +461,9 @@ export default function DevbrainAppResponsive() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 px-4 py-3 md:px-6 md:py-4">
+      <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 py-3 md:px-6 md:py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <button 
@@ -507,13 +507,13 @@ export default function DevbrainAppResponsive() {
       </div>
       
       {/* Main Content */}
-      <div className="flex-1 flex relative pt-16 md:pt-20">
+      <div className="flex-1 flex min-h-0">
         {/* Desktop Layout - Side by Side */}
         <div className="hidden md:flex w-full h-full">
           {/* Chat Area */}
-          <div className="flex-1 flex flex-col h-full">
+          <div className="flex-1 flex flex-col min-h-0">
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-6" style={{ height: 'calc(100vh - 140px)' }}>
+            <div className="flex-1 overflow-y-auto p-6 min-h-0">
               {messages.length === 0 ? (
                 <div className="max-w-2xl mx-auto text-center py-12">
                   <h2 className="text-3xl font-bold text-gray-800 mb-4">
@@ -610,14 +610,14 @@ export default function DevbrainAppResponsive() {
           </div>
           
           {/* Visual Intelligence Panel */}
-          <div className="w-96 bg-white border-l border-gray-200 flex flex-col h-full">
+          <div className="w-96 bg-white border-l border-gray-200 flex flex-col min-h-0">
             <div className="flex-shrink-0 p-4 border-b border-gray-200 bg-gray-50">
               <h3 className="font-semibold text-gray-800 flex items-center space-x-2">
                 <BarChart3 size={18} />
                 <span>Visual Intelligence</span>
               </h3>
             </div>
-            <div className="flex-1 overflow-y-auto" style={{ height: 'calc(100vh - 160px)' }}>
+            <div className="flex-1 overflow-y-auto min-h-0">
               <SimpleVisualization
                 projectState={projectState}
                 messages={messages}
