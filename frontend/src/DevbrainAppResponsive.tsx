@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, TrendingUp, Users, Target, Package, ChevronRight, Menu, X, BarChart3, MessageCircle, Lightbulb, DollarSign, Clock, Star } from 'lucide-react';
+import { Send, TrendingUp, Users, Target, Package, ChevronRight, Menu, X, BarChart3, MessageCircle, Lightbulb, DollarSign, Clock, Star, Download } from 'lucide-react';
 
 // Component to render AI responses as interactive cards
 const AIResponseCards = ({ content, onFollowUp }: { content: string, onFollowUp: (text: string) => void }) => {
@@ -398,6 +398,35 @@ export default function DevbrainAppResponsive() {
     }
   };
 
+  const handleExportContext = () => {
+    const exportData = {
+      projectName: 'DevBrain AI Session',
+      timestamp: new Date().toISOString(),
+      stage: projectState.stage,
+      businessIdea: projectState.businessIdea,
+      messages: messages.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+        timestamp: msg.timestamp
+      })),
+      insights: {
+        competitors: projectState.competitors,
+        features: projectState.mvpFeatures,
+        targetSegments: projectState.targetSegments
+      }
+    };
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `devbrain-context-${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const handleQuickAction = async (text: string) => {
     setInputValue(text);
     
@@ -492,9 +521,17 @@ export default function DevbrainAppResponsive() {
             >
               <BarChart3 size={20} />
             </button>
+            <button
+              onClick={handleExportContext}
+              disabled={messages.length === 0}
+              className="p-2 rounded-lg text-gray-500 disabled:opacity-50"
+              title="Export"
+            >
+              <Download size={20} />
+            </button>
           </div>
           
-          {/* Desktop Stage Indicator */}
+          {/* Desktop Stage Indicator and Export */}
           <div className="hidden md:flex items-center space-x-4">
             <div className="text-sm">
               <span className="text-gray-500">Stage: </span>
@@ -502,6 +539,15 @@ export default function DevbrainAppResponsive() {
                 {projectState.stage.replace('_', ' ').toUpperCase()}
               </span>
             </div>
+            <button
+              onClick={handleExportContext}
+              disabled={messages.length === 0}
+              className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              title="Export conversation context"
+            >
+              <Download size={16} />
+              <span>Export</span>
+            </button>
           </div>
         </div>
       </div>
