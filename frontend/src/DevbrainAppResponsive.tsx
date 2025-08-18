@@ -509,11 +509,11 @@ export default function DevbrainAppResponsive() {
       {/* Main Content */}
       <div className="flex-1 flex relative pt-16 md:pt-20">
         {/* Desktop Layout - Side by Side */}
-        <div className="hidden md:flex w-full">
+        <div className="hidden md:flex w-full h-full">
           {/* Chat Area */}
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col h-full">
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="flex-1 overflow-y-auto p-6" style={{ height: 'calc(100vh - 140px)' }}>
               {messages.length === 0 ? (
                 <div className="max-w-2xl mx-auto text-center py-12">
                   <h2 className="text-3xl font-bold text-gray-800 mb-4">
@@ -586,7 +586,7 @@ export default function DevbrainAppResponsive() {
             </div>
             
             {/* Input Area */}
-            <div className="border-t border-gray-200 bg-white p-4">
+            <div className="flex-shrink-0 border-t border-gray-200 bg-white p-4">
               <div className="max-w-3xl mx-auto flex space-x-4">
                 <input
                   type="text"
@@ -610,11 +610,19 @@ export default function DevbrainAppResponsive() {
           </div>
           
           {/* Visual Intelligence Panel */}
-          <div className="w-96 bg-white border-l border-gray-200 overflow-y-auto">
-            <SimpleVisualization
-              projectState={projectState}
-              messages={messages}
-            />
+          <div className="w-96 bg-white border-l border-gray-200 flex flex-col h-full">
+            <div className="flex-shrink-0 p-4 border-b border-gray-200 bg-gray-50">
+              <h3 className="font-semibold text-gray-800 flex items-center space-x-2">
+                <BarChart3 size={18} />
+                <span>Visual Intelligence</span>
+              </h3>
+            </div>
+            <div className="flex-1 overflow-y-auto" style={{ height: 'calc(100vh - 160px)' }}>
+              <SimpleVisualization
+                projectState={projectState}
+                messages={messages}
+              />
+            </div>
           </div>
         </div>
         
