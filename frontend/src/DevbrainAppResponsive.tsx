@@ -1,5 +1,139 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, TrendingUp, Users, Target, Package, ChevronRight, Menu, X, BarChart3, MessageCircle } from 'lucide-react';
+import { Send, TrendingUp, Users, Target, Package, ChevronRight, Menu, X, BarChart3, MessageCircle, Lightbulb, DollarSign, Clock, Star } from 'lucide-react';
+
+// Component to render AI responses as interactive cards
+const AIResponseCards = ({ content, onFollowUp }: { content: string, onFollowUp: (text: string) => void }) => {
+  // Parse content to extract actionable items
+  const parseContentToCards = (text: string) => {
+    const cards = [];
+    
+    // Extract competitors
+    const competitorMatch = text.match(/(?:competitors?|competition).*?:?\s*(.*?)(?:\n\n|\.|$)/is);
+    if (competitorMatch) {
+      const competitors = competitorMatch[1]
+        .split(/,|and|\n/)
+        .map(c => c.trim())
+        .filter(c => c.length > 0 && c.length < 50)
+        .slice(0, 3);
+      
+      if (competitors.length > 0) {
+        cards.push({
+          type: 'competitors',
+          icon: TrendingUp,
+          title: '🏢 Key Competitors',
+          items: competitors,
+          action: 'Tell me more about how to differentiate from these competitors',
+          color: 'red'
+        });
+      }
+    }
+    
+    // Extract features
+    const featureLines = text.split('\n').filter(line => 
+      line.match(/^[\-•*]|\d+\./) && line.length > 10 && line.length < 100
+    );
+    
+    if (featureLines.length > 0) {
+      cards.push({
+        type: 'features',
+        icon: Target,
+        title: '⚡ Key Features',
+        items: featureLines.slice(0, 4).map(f => f.replace(/^[\-•*\d\.\s]+/, '')),
+        action: 'Help me prioritize these features for my MVP',
+        color: 'blue'
+      });
+    }
+    
+    // Extract market insights
+    const marketMatch = text.match(/(?:market|opportunity|size|revenue).*?(\$[\d.]+[BM])/i);
+    if (marketMatch) {
+      cards.push({
+        type: 'market',
+        icon: DollarSign,
+        title: '💰 Market Opportunity',
+        items: [marketMatch[0]],
+        action: 'How can I capture a portion of this market?',
+        color: 'green'
+      });
+    }
+    
+    // Extract recommendations
+    const recommendLines = text.split('\n').filter(line => 
+      line.match(/recommend|suggest|consider|should/) && line.length > 20 && line.length < 150
+    );
+    
+    if (recommendLines.length > 0) {
+      cards.push({
+        type: 'recommendations',
+        icon: Lightbulb,
+        title: '💡 Recommendations',
+        items: recommendLines.slice(0, 3),
+        action: 'Give me a detailed implementation plan for these recommendations',
+        color: 'purple'
+      });
+    }
+    
+    return cards;
+  };
+  
+  const cards = parseContentToCards(content);
+  
+  if (cards.length === 0) {
+    // Fallback to text if no cards can be extracted
+    return (
+      <div className="bg-white border border-gray-200 p-4 rounded-lg">
+        <p className="text-gray-800 whitespace-pre-wrap">{content}</p>
+        <div className="mt-3 pt-3 border-t border-gray-100">
+          <button
+            onClick={() => onFollowUp("Can you give me more specific actionable steps?")}
+            className="text-sm text-blue-600 hover:text-blue-700 flex items-center space-x-1"
+          >
+            <ChevronRight size={14} />
+            <span>Ask for more details</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="space-y-3">
+      {/* Show original text if it's short */}
+      {content.length < 200 && (
+        <div className="bg-white border border-gray-200 p-3 rounded-lg">
+          <p className="text-gray-800 text-sm">{content}</p>
+        </div>
+      )}
+      
+      {/* Interactive cards */}
+      {cards.map((card, index) => (
+        <div key={index} className={`bg-white border-l-4 border-${card.color}-500 shadow-sm rounded-lg p-4`}>
+          <div className="flex items-center space-x-2 mb-3">
+            <card.icon size={18} className={`text-${card.color}-600`} />
+            <h4 className="font-medium text-gray-800">{card.title}</h4>
+          </div>
+          
+          <div className="space-y-2 mb-3">
+            {card.items.map((item, i) => (
+              <div key={i} className={`bg-${card.color}-50 p-2 rounded text-sm text-gray-700`}>
+                {item}
+              </div>
+            ))}
+          </div>
+          
+          <button
+            onClick={() => onFollowUp(card.action)}
+            className={`w-full text-left text-sm text-${card.color}-600 hover:text-${card.color}-700 flex items-center justify-between group`}
+          >
+            <span>{card.action}</span>
+            <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 // Simple visualization component for now
 const SimpleVisualization = ({ projectState, messages }: { projectState: any, messages: any[] }) => {
   if (messages.length === 0) {
@@ -411,22 +545,28 @@ export default function DevbrainAppResponsive() {
                       key={index}
                       className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                     >
-                      <div
-                        className={`max-w-[80%] p-4 rounded-lg ${
-                          message.role === 'user'
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-white border border-gray-200 text-gray-800'
-                        }`}
-                      >
-                        <p className="whitespace-pre-wrap">{message.content}</p>
-                        {message.timestamp && (
-                          <p className={`text-xs mt-2 ${
-                            message.role === 'user' ? 'text-blue-100' : 'text-gray-400'
-                          }`}>
-                            {message.timestamp.toLocaleTimeString()}
-                          </p>
-                        )}
-                      </div>
+                      {message.role === 'user' ? (
+                        <div className="bg-blue-600 text-white p-4 rounded-lg max-w-[80%]">
+                          <p className="whitespace-pre-wrap">{message.content}</p>
+                          {message.timestamp && (
+                            <p className="text-xs mt-2 text-blue-100">
+                              {message.timestamp.toLocaleTimeString()}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="max-w-[80%]">
+                          <AIResponseCards 
+                            content={message.content} 
+                            onFollowUp={(text) => handleQuickAction(text)}
+                          />
+                          {message.timestamp && (
+                            <p className="text-xs mt-2 text-gray-400">
+                              {message.timestamp.toLocaleTimeString()}
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                   {isLoading && (
@@ -515,15 +655,18 @@ export default function DevbrainAppResponsive() {
                         key={index}
                         className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                       >
-                        <div
-                          className={`max-w-[85%] p-3 rounded-lg ${
-                            message.role === 'user'
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-white border border-gray-200 text-gray-800'
-                          }`}
-                        >
-                          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                        </div>
+                        {message.role === 'user' ? (
+                          <div className="bg-blue-600 text-white p-3 rounded-lg max-w-[85%]">
+                            <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                          </div>
+                        ) : (
+                          <div className="max-w-[85%]">
+                            <AIResponseCards 
+                              content={message.content} 
+                              onFollowUp={(text) => handleQuickAction(text)}
+                            />
+                          </div>
+                        )}
                       </div>
                     ))}
                     {isLoading && (
