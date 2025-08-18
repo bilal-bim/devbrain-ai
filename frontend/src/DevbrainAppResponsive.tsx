@@ -1,135 +1,86 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, TrendingUp, Users, Target, Package, ChevronRight, Menu, X, BarChart3, MessageCircle, Lightbulb, DollarSign, Clock, Star, Download } from 'lucide-react';
 
-// Component to render AI responses as interactive cards
-const AIResponseCards = ({ content, onFollowUp }: { content: string, onFollowUp: (text: string) => void }) => {
-  // Parse content to extract actionable items
-  const parseContentToCards = (text: string) => {
-    const cards = [];
-    
-    // Extract competitors
-    const competitorMatch = text.match(/(?:competitors?|competition).*?:?\s*(.*?)(?:\n\n|\.|$)/is);
-    if (competitorMatch) {
-      const competitors = competitorMatch[1]
-        .split(/,|and|\n/)
-        .map(c => c.trim())
-        .filter(c => c.length > 0 && c.length < 50)
-        .slice(0, 3);
-      
-      if (competitors.length > 0) {
-        cards.push({
-          type: 'competitors',
-          icon: TrendingUp,
-          title: '🏢 Key Competitors',
-          items: competitors,
-          action: 'Tell me more about how to differentiate from these competitors',
-          color: 'red'
-        });
-      }
-    }
-    
-    // Extract features
-    const featureLines = text.split('\n').filter(line => 
-      line.match(/^[\-•*]|\d+\./) && line.length > 10 && line.length < 100
-    );
-    
-    if (featureLines.length > 0) {
-      cards.push({
-        type: 'features',
-        icon: Target,
-        title: '⚡ Key Features',
-        items: featureLines.slice(0, 4).map(f => f.replace(/^[\-•*\d\.\s]+/, '')),
-        action: 'Help me prioritize these features for my MVP',
-        color: 'blue'
-      });
-    }
-    
-    // Extract market insights
-    const marketMatch = text.match(/(?:market|opportunity|size|revenue).*?(\$[\d.]+[BM])/i);
-    if (marketMatch) {
-      cards.push({
-        type: 'market',
-        icon: DollarSign,
-        title: '💰 Market Opportunity',
-        items: [marketMatch[0]],
-        action: 'How can I capture a portion of this market?',
-        color: 'green'
-      });
-    }
-    
-    // Extract recommendations
-    const recommendLines = text.split('\n').filter(line => 
-      line.match(/recommend|suggest|consider|should/) && line.length > 20 && line.length < 150
-    );
-    
-    if (recommendLines.length > 0) {
-      cards.push({
-        type: 'recommendations',
-        icon: Lightbulb,
-        title: '💡 Recommendations',
-        items: recommendLines.slice(0, 3),
-        action: 'Give me a detailed implementation plan for these recommendations',
-        color: 'purple'
-      });
-    }
-    
-    return cards;
-  };
+// Component to render AI responses - only uses cards when it makes sense
+const AIResponseDisplay = ({ content, onFollowUp }: { content: string, onFollowUp: (text: string) => void }) => {
+  // Check if content has structured lists that would benefit from cards
+  const hasStructuredContent = 
+    content.includes('•') || 
+    content.includes('- ') ||
+    content.match(/\d+\./) ||
+    content.toLowerCase().includes('features:') ||
+    content.toLowerCase().includes('competitors:');
   
-  const cards = parseContentToCards(content);
-  
-  if (cards.length === 0) {
-    // Fallback to text if no cards can be extracted
+  // For most responses, just show clean formatted text
+  if (!hasStructuredContent || content.length < 150) {
     return (
       <div className="bg-white border border-gray-200 p-4 rounded-lg">
-        <p className="text-gray-800 whitespace-pre-wrap">{content}</p>
-        <div className="mt-3 pt-3 border-t border-gray-100">
-          <button
-            onClick={() => onFollowUp("Can you give me more specific actionable steps?")}
-            className="text-sm text-blue-600 hover:text-blue-700 flex items-center space-x-1"
-          >
-            <ChevronRight size={14} />
-            <span>Ask for more details</span>
-          </button>
+        <div className="prose prose-sm max-w-none text-gray-800">
+          {content.split('\n\n').map((paragraph, i) => (
+            <p key={i} className="mb-3 last:mb-0 whitespace-pre-wrap">
+              {paragraph}
+            </p>
+          ))}
         </div>
       </div>
     );
   }
   
+  // For longer structured content, show formatted text with optional follow-ups
+  const followUpQuestions = [];
+  
+  if (content.toLowerCase().includes('competitor')) {
+    followUpQuestions.push("How do I differentiate from competitors?");
+  }
+  if (content.toLowerCase().includes('feature') || content.toLowerCase().includes('mvp')) {
+    followUpQuestions.push("Which features should I prioritize first?");
+  }
+  if (content.toLowerCase().includes('market') || content.toLowerCase().includes('customer')) {
+    followUpQuestions.push("How do I validate this with real customers?");
+  }
+  if (content.toLowerCase().includes('tech') || content.toLowerCase().includes('stack')) {
+    followUpQuestions.push("What's the simplest tech stack to start with?");
+  }
+  
   return (
     <div className="space-y-3">
-      {/* Show original text if it's short */}
-      {content.length < 200 && (
-        <div className="bg-white border border-gray-200 p-3 rounded-lg">
-          <p className="text-gray-800 text-sm">{content}</p>
+      <div className="bg-white border border-gray-200 p-4 rounded-lg">
+        <div className="prose prose-sm max-w-none text-gray-800">
+          {content.split('\n\n').map((paragraph, i) => {
+            // Check if this is a list
+            if (paragraph.includes('•') || paragraph.includes('- ') || paragraph.match(/^\d+\./m)) {
+              return (
+                <div key={i} className="mb-3 pl-4">
+                  {paragraph.split('\n').map((line, j) => (
+                    <div key={j} className="mb-1">{line}</div>
+                  ))}
+                </div>
+              );
+            }
+            // Regular paragraph
+            return (
+              <p key={i} className="mb-3 last:mb-0 whitespace-pre-wrap">
+                {paragraph}
+              </p>
+            );
+          })}
+        </div>
+      </div>
+      
+      {/* Show follow-up questions only if relevant */}
+      {followUpQuestions.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {followUpQuestions.map((question, i) => (
+            <button
+              key={i}
+              onClick={() => onFollowUp(question)}
+              className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-full text-sm text-gray-700 transition-colors"
+            >
+              {question}
+            </button>
+          ))}
         </div>
       )}
-      
-      {/* Interactive cards */}
-      {cards.map((card, index) => (
-        <div key={index} className={`bg-white border-l-4 border-${card.color}-500 shadow-sm rounded-lg p-4`}>
-          <div className="flex items-center space-x-2 mb-3">
-            <card.icon size={18} className={`text-${card.color}-600`} />
-            <h4 className="font-medium text-gray-800">{card.title}</h4>
-          </div>
-          
-          <div className="space-y-2 mb-3">
-            {card.items.map((item, i) => (
-              <div key={i} className={`bg-${card.color}-50 p-2 rounded text-sm text-gray-700`}>
-                {item}
-              </div>
-            ))}
-          </div>
-          
-          <button
-            onClick={() => onFollowUp(card.action)}
-            className={`w-full text-left text-sm text-${card.color}-600 hover:text-${card.color}-700 flex items-center justify-between group`}
-          >
-            <span>{card.action}</span>
-            <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
-          </button>
-        </div>
-      ))}
     </div>
   );
 };
@@ -602,7 +553,7 @@ export default function DevbrainAppResponsive() {
                         </div>
                       ) : (
                         <div className="max-w-[80%]">
-                          <AIResponseCards 
+                          <AIResponseDisplay 
                             content={message.content} 
                             onFollowUp={(text) => handleQuickAction(text)}
                           />
@@ -713,7 +664,7 @@ export default function DevbrainAppResponsive() {
                           </div>
                         ) : (
                           <div className="max-w-[85%]">
-                            <AIResponseCards 
+                            <AIResponseDisplay 
                               content={message.content} 
                               onFollowUp={(text) => handleQuickAction(text)}
                             />
