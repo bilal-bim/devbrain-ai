@@ -1,86 +1,148 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, TrendingUp, Users, Target, Package, ChevronRight, Menu, X, BarChart3, MessageCircle, Lightbulb, DollarSign, Clock, Star, Download } from 'lucide-react';
 
-// Component to render AI responses - only uses cards when it makes sense
+// Component to render AI responses with beautiful formatting
 const AIResponseDisplay = ({ content, onFollowUp }: { content: string, onFollowUp: (text: string) => void }) => {
-  // Check if content has structured lists that would benefit from cards
-  const hasStructuredContent = 
-    content.includes('•') || 
-    content.includes('- ') ||
-    content.match(/\d+\./) ||
-    content.toLowerCase().includes('features:') ||
-    content.toLowerCase().includes('competitors:');
+  // Parse content into sections for better formatting
+  const formatContent = (text: string) => {
+    const sections = [];
+    const lines = text.split('\n');
+    let currentSection = { type: 'text', content: [], title: '' };
+    
+    lines.forEach((line) => {
+      // Check for headers (lines ending with : or containing keywords)
+      if (line.match(/^(.*?):?\s*$/) && line.length > 3 && line.length < 50 && 
+          (line.includes(':') || line.match(/^(##?|###?)\s/) || 
+           line.match(/market|competition|features|mvp|tech|recommendation|next step/i))) {
+        if (currentSection.content.length > 0) {
+          sections.push(currentSection);
+        }
+        currentSection = { 
+          type: 'section', 
+          title: line.replace(/^#+\s*/, '').replace(/:$/, ''), 
+          content: [] 
+        };
+      }
+      // Check for list items
+      else if (line.match(/^[\s]*[-•*]\s/) || line.match(/^[\s]*\d+\.\s/)) {
+        if (currentSection.type !== 'list') {
+          if (currentSection.content.length > 0) {
+            sections.push(currentSection);
+          }
+          currentSection = { type: 'list', content: [], title: '' };
+        }
+        currentSection.content.push(line.replace(/^[\s]*[-•*\d.]\s*/, ''));
+      }
+      // Regular text
+      else if (line.trim()) {
+        if (currentSection.type !== 'text' && currentSection.type !== 'section') {
+          if (currentSection.content.length > 0) {
+            sections.push(currentSection);
+          }
+          currentSection = { type: 'text', content: [], title: '' };
+        }
+        currentSection.content.push(line);
+      }
+    });
+    
+    if (currentSection.content.length > 0) {
+      sections.push(currentSection);
+    }
+    
+    return sections;
+  };
   
-  // For most responses, just show clean formatted text
-  if (!hasStructuredContent || content.length < 150) {
-    return (
-      <div className="bg-white border border-gray-200 p-4 rounded-lg">
-        <div className="prose prose-sm max-w-none text-gray-800">
-          {content.split('\n\n').map((paragraph, i) => (
-            <p key={i} className="mb-3 last:mb-0 whitespace-pre-wrap">
-              {paragraph}
-            </p>
-          ))}
-        </div>
-      </div>
-    );
-  }
+  const sections = formatContent(content);
   
-  // For longer structured content, show formatted text with optional follow-ups
+  // Generate smart follow-up questions
   const followUpQuestions = [];
+  const contentLower = content.toLowerCase();
   
-  if (content.toLowerCase().includes('competitor')) {
-    followUpQuestions.push("How do I differentiate from competitors?");
+  if (contentLower.includes('competitor')) {
+    followUpQuestions.push({ icon: '🎯', text: "How do I differentiate from competitors?" });
   }
-  if (content.toLowerCase().includes('feature') || content.toLowerCase().includes('mvp')) {
-    followUpQuestions.push("Which features should I prioritize first?");
+  if (contentLower.includes('feature') || contentLower.includes('mvp')) {
+    followUpQuestions.push({ icon: '⚡', text: "Which features should I build first?" });
   }
-  if (content.toLowerCase().includes('market') || content.toLowerCase().includes('customer')) {
-    followUpQuestions.push("How do I validate this with real customers?");
+  if (contentLower.includes('market') || contentLower.includes('customer')) {
+    followUpQuestions.push({ icon: '👥', text: "How do I validate with customers?" });
   }
-  if (content.toLowerCase().includes('tech') || content.toLowerCase().includes('stack')) {
-    followUpQuestions.push("What's the simplest tech stack to start with?");
+  if (contentLower.includes('tech') || contentLower.includes('stack')) {
+    followUpQuestions.push({ icon: '🛠️', text: "What's the best tech stack?" });
+  }
+  if (contentLower.includes('pricing') || contentLower.includes('revenue')) {
+    followUpQuestions.push({ icon: '💰', text: "How should I price this?" });
   }
   
   return (
     <div className="space-y-3">
-      <div className="bg-white border border-gray-200 p-4 rounded-lg">
-        <div className="prose prose-sm max-w-none text-gray-800">
-          {content.split('\n\n').map((paragraph, i) => {
-            // Check if this is a list
-            if (paragraph.includes('•') || paragraph.includes('- ') || paragraph.match(/^\d+\./m)) {
+      <div className="bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+        <div className="p-5 space-y-4">
+          {sections.map((section, i) => {
+            // Section with title
+            if (section.type === 'section' && section.title) {
               return (
-                <div key={i} className="mb-3 pl-4">
-                  {paragraph.split('\n').map((line, j) => (
-                    <div key={j} className="mb-1">{line}</div>
+                <div key={i} className="space-y-2">
+                  <h3 className="font-semibold text-gray-900 flex items-center space-x-2">
+                    {section.title.match(/market/i) && <span>📊</span>}
+                    {section.title.match(/competitor/i) && <span>🏢</span>}
+                    {section.title.match(/feature|mvp/i) && <span>⚡</span>}
+                    {section.title.match(/tech|stack/i) && <span>🔧</span>}
+                    {section.title.match(/customer|user/i) && <span>👥</span>}
+                    {section.title.match(/recommendation|next/i) && <span>💡</span>}
+                    <span>{section.title}</span>
+                  </h3>
+                  <div className="text-gray-700 pl-7">
+                    {section.content.join(' ')}
+                  </div>
+                </div>
+              );
+            }
+            // List items
+            else if (section.type === 'list') {
+              return (
+                <div key={i} className="space-y-2">
+                  {section.content.map((item, j) => (
+                    <div key={j} className="flex items-start space-x-3 group">
+                      <div className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-blue-500 mt-2"></div>
+                      <div className="flex-1 text-gray-700 group-hover:text-gray-900 transition-colors">
+                        {item}
+                      </div>
+                    </div>
                   ))}
                 </div>
               );
             }
-            // Regular paragraph
-            return (
-              <p key={i} className="mb-3 last:mb-0 whitespace-pre-wrap">
-                {paragraph}
-              </p>
-            );
+            // Regular text
+            else {
+              return (
+                <div key={i} className="text-gray-700 leading-relaxed">
+                  {section.content.join(' ')}
+                </div>
+              );
+            }
           })}
         </div>
+        
+        {/* Follow-up questions */}
+        {followUpQuestions.length > 0 && (
+          <div className="border-t border-gray-100 bg-gray-50 px-5 py-3">
+            <div className="flex flex-wrap gap-2">
+              {followUpQuestions.map((question, i) => (
+                <button
+                  key={i}
+                  onClick={() => onFollowUp(question.text)}
+                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-white hover:bg-blue-50 border border-gray-200 hover:border-blue-300 rounded-lg text-sm text-gray-700 hover:text-blue-600 transition-all group"
+                >
+                  <span>{question.icon}</span>
+                  <span>{question.text}</span>
+                  <ChevronRight size={14} className="opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
-      
-      {/* Show follow-up questions only if relevant */}
-      {followUpQuestions.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {followUpQuestions.map((question, i) => (
-            <button
-              key={i}
-              onClick={() => onFollowUp(question)}
-              className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-full text-sm text-gray-700 transition-colors"
-            >
-              {question}
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   );
 };
