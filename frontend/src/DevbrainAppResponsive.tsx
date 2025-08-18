@@ -3,28 +3,85 @@ import { Send, TrendingUp, Users, Target, Package, ChevronRight, Menu, X, BarCha
 
 // Component to render AI responses with beautiful formatting
 const AIResponseDisplay = ({ content, onFollowUp }: { content: string, onFollowUp: (text: string) => void }) => {
-  // Parse content into sections for better formatting
-  const formatContent = (text: string) => {
-    // Clean up markdown formatting
-    text = text.replace(/\*\*(.*?)\*\*/g, '$1'); // Remove bold **text**
-    text = text.replace(/\*(.*?)\*/g, '$1'); // Remove italic *text*
-    text = text.replace(/`(.*?)`/g, '$1'); // Remove code backticks
+  // Convert markdown to React elements with proper formatting
+  const renderFormattedText = (text: string) => {
+    // Process inline markdown
+    const processInlineMarkdown = (str: string) => {
+      const parts = [];
+      let lastIndex = 0;
+      
+      // Combined regex for all markdown patterns
+      const regex = /(\*\*([^*]+)\*\*)|(\*([^*]+)\*)|(`([^`]+)`)|(\[([^\]]+)\]\(([^)]+)\))/g;
+      let match;
+      
+      while ((match = regex.exec(str)) !== null) {
+        // Add text before the match
+        if (match.index > lastIndex) {
+          parts.push(str.slice(lastIndex, match.index));
+        }
+        
+        // Bold text
+        if (match[1]) {
+          parts.push(<strong key={match.index} className="font-semibold text-gray-900">{match[2]}</strong>);
+        }
+        // Italic text
+        else if (match[3]) {
+          parts.push(<em key={match.index} className="italic">{match[4]}</em>);
+        }
+        // Code text
+        else if (match[5]) {
+          parts.push(
+            <code key={match.index} className="px-1.5 py-0.5 bg-gray-100 text-pink-600 rounded text-sm font-mono">
+              {match[6]}
+            </code>
+          );
+        }
+        // Links
+        else if (match[7]) {
+          parts.push(
+            <a key={match.index} href={match[9]} className="text-blue-600 hover:text-blue-700 underline" target="_blank" rel="noopener noreferrer">
+              {match[8]}
+            </a>
+          );
+        }
+        
+        lastIndex = regex.lastIndex;
+      }
+      
+      // Add remaining text
+      if (lastIndex < str.length) {
+        parts.push(str.slice(lastIndex));
+      }
+      
+      return parts.length > 0 ? parts : str;
+    };
     
     const sections = [];
     const lines = text.split('\n');
     let currentSection = { type: 'text', content: [], title: '' };
     
     lines.forEach((line) => {
-      // Check for headers (lines ending with : or containing keywords)
-      if (line.match(/^(.*?):?\s*$/) && line.length > 3 && line.length < 50 && 
-          (line.includes(':') || line.match(/^(##?|###?)\s/) || 
-           line.match(/market|competition|features|mvp|tech|recommendation|next step/i))) {
+      // Check for headers with # syntax
+      if (line.match(/^#{1,3}\s/)) {
+        if (currentSection.content.length > 0) {
+          sections.push(currentSection);
+        }
+        const level = line.match(/^(#+)/)[1].length;
+        currentSection = { 
+          type: 'header', 
+          level,
+          title: line.replace(/^#+\s*/, ''), 
+          content: [] 
+        };
+      }
+      // Check for section headers (lines ending with :)
+      else if (line.match(/^[^:]+:$/) && line.length > 3 && line.length < 50) {
         if (currentSection.content.length > 0) {
           sections.push(currentSection);
         }
         currentSection = { 
           type: 'section', 
-          title: line.replace(/^#+\s*/, '').replace(/:$/, ''), 
+          title: line.replace(/:$/, ''), 
           content: [] 
         };
       }
@@ -36,11 +93,28 @@ const AIResponseDisplay = ({ content, onFollowUp }: { content: string, onFollowU
           }
           currentSection = { type: 'list', content: [], title: '' };
         }
-        currentSection.content.push(line.replace(/^[\s]*[-•*\d.]\s*/, ''));
+        const isNumbered = line.match(/^[\s]*(\d+)\.\s/);
+        const cleanLine = line.replace(/^[\s]*[-•*\d.]\s*/, '');
+        currentSection.content.push({ 
+          text: cleanLine, 
+          number: isNumbered ? isNumbered[1] : null 
+        });
+      }
+      // Code block
+      else if (line.match(/^```/)) {
+        if (currentSection.type === 'code') {
+          sections.push(currentSection);
+          currentSection = { type: 'text', content: [], title: '' };
+        } else {
+          if (currentSection.content.length > 0) {
+            sections.push(currentSection);
+          }
+          currentSection = { type: 'code', content: [], title: '' };
+        }
       }
       // Regular text
-      else if (line.trim()) {
-        if (currentSection.type !== 'text' && currentSection.type !== 'section') {
+      else if (line.trim() || currentSection.type === 'code') {
+        if (currentSection.type !== 'text' && currentSection.type !== 'section' && currentSection.type !== 'code' && currentSection.type !== 'header') {
           if (currentSection.content.length > 0) {
             sections.push(currentSection);
           }
@@ -54,10 +128,10 @@ const AIResponseDisplay = ({ content, onFollowUp }: { content: string, onFollowU
       sections.push(currentSection);
     }
     
-    return sections;
+    return { sections, processInlineMarkdown };
   };
   
-  const sections = formatContent(content);
+  const { sections, processInlineMarkdown } = renderFormattedText(content);
   
   // Generate smart follow-up questions
   const followUpQuestions = [];
@@ -84,8 +158,18 @@ const AIResponseDisplay = ({ content, onFollowUp }: { content: string, onFollowU
       <div className="bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-xl shadow-sm overflow-hidden">
         <div className="p-5 space-y-4">
           {sections.map((section, i) => {
+            // Headers (# ## ###)
+            if (section.type === 'header') {
+              const HeaderTag = section.level === 1 ? 'h2' : section.level === 2 ? 'h3' : 'h4';
+              const headerClass = section.level === 1 ? 'text-xl font-bold' : section.level === 2 ? 'text-lg font-semibold' : 'text-base font-medium';
+              return (
+                <HeaderTag key={i} className={`${headerClass} text-gray-900 mb-2`}>
+                  {processInlineMarkdown(section.title)}
+                </HeaderTag>
+              );
+            }
             // Section with title
-            if (section.type === 'section' && section.title) {
+            else if (section.type === 'section' && section.title) {
               return (
                 <div key={i} className="space-y-2">
                   <h3 className="font-semibold text-gray-900 flex items-center space-x-2">
@@ -95,10 +179,12 @@ const AIResponseDisplay = ({ content, onFollowUp }: { content: string, onFollowU
                     {section.title.match(/tech|stack/i) && <span>🔧</span>}
                     {section.title.match(/customer|user/i) && <span>👥</span>}
                     {section.title.match(/recommendation|next/i) && <span>💡</span>}
-                    <span>{section.title}</span>
+                    <span>{processInlineMarkdown(section.title)}</span>
                   </h3>
                   <div className="text-gray-700 pl-7">
-                    {section.content.join(' ')}
+                    {section.content.map((line, j) => (
+                      <div key={j}>{processInlineMarkdown(line)}</div>
+                    ))}
                   </div>
                 </div>
               );
@@ -106,23 +192,41 @@ const AIResponseDisplay = ({ content, onFollowUp }: { content: string, onFollowU
             // List items
             else if (section.type === 'list') {
               return (
-                <div key={i} className="space-y-2">
+                <div key={i} className="space-y-2 pl-2">
                   {section.content.map((item, j) => (
                     <div key={j} className="flex items-start space-x-3 group">
-                      <div className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-blue-500 mt-2"></div>
+                      {item.number ? (
+                        <span className="flex-shrink-0 w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium">
+                          {item.number}
+                        </span>
+                      ) : (
+                        <div className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-blue-500 mt-2"></div>
+                      )}
                       <div className="flex-1 text-gray-700 group-hover:text-gray-900 transition-colors">
-                        {item}
+                        {processInlineMarkdown(item.text)}
                       </div>
                     </div>
                   ))}
                 </div>
               );
             }
+            // Code block
+            else if (section.type === 'code') {
+              return (
+                <pre key={i} className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto">
+                  <code className="text-sm font-mono">
+                    {section.content.join('\n')}
+                  </code>
+                </pre>
+              );
+            }
             // Regular text
             else {
               return (
-                <div key={i} className="text-gray-700 leading-relaxed">
-                  {section.content.join(' ')}
+                <div key={i} className="text-gray-700 leading-relaxed space-y-2">
+                  {section.content.map((line, j) => (
+                    <div key={j}>{processInlineMarkdown(line)}</div>
+                  ))}
                 </div>
               );
             }
