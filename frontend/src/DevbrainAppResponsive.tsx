@@ -5,6 +5,11 @@ import { Send, TrendingUp, Users, Target, Package, ChevronRight, Menu, X, BarCha
 const AIResponseDisplay = ({ content, onFollowUp }: { content: string, onFollowUp: (text: string) => void }) => {
   // Parse content into sections for better formatting
   const formatContent = (text: string) => {
+    // Clean up markdown formatting
+    text = text.replace(/\*\*(.*?)\*\*/g, '$1'); // Remove bold **text**
+    text = text.replace(/\*(.*?)\*/g, '$1'); // Remove italic *text*
+    text = text.replace(/`(.*?)`/g, '$1'); // Remove code backticks
+    
     const sections = [];
     const lines = text.split('\n');
     let currentSection = { type: 'text', content: [], title: '' };
