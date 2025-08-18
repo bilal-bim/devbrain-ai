@@ -126,10 +126,10 @@ export default function DevbrainAppResponsive() {
   }, [messages]);
 
   const quickActions = [
-    { icon: TrendingUp, text: "I want to build a SaaS product for...", color: "blue" },
-    { icon: Users, text: "Help me identify my target market for...", color: "green" },
-    { icon: Target, text: "What features should my MVP include for...", color: "purple" },
-    { icon: Package, text: "Recommend a tech stack for...", color: "orange" }
+    { icon: TrendingUp, text: "I want to build a SaaS platform for freelancers to manage invoices and payments", color: "blue" },
+    { icon: Users, text: "Help me validate a mobile app idea for meal planning and grocery delivery", color: "green" },
+    { icon: Target, text: "I have an idea for an AI-powered fitness coach app - what should my MVP include?", color: "purple" },
+    { icon: Package, text: "I want to create a social media scheduling tool - what's the best tech stack?", color: "orange" }
   ];
 
   const extractVisualizationData = (content: string) => {
