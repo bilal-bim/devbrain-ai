@@ -1,6 +1,90 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, TrendingUp, Users, Target, Package, ChevronRight, Menu, X, BarChart3, MessageCircle } from 'lucide-react';
-import { VisualizationCanvas } from './components/organisms/VisualizationCanvas/VisualizationCanvas';
+// Simple visualization component for now
+const SimpleVisualization = ({ projectState, messages }: { projectState: any, messages: any[] }) => {
+  if (messages.length === 0) {
+    return (
+      <div className="p-6 text-center">
+        <div className="text-gray-400 mb-4">📊</div>
+        <h3 className="text-lg font-medium text-gray-700 mb-2">Visual Intelligence</h3>
+        <p className="text-sm text-gray-500">Charts and insights will appear here as you chat</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 space-y-6">
+      <div>
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">📈 Project Overview</h3>
+        <div className="bg-blue-50 p-4 rounded-lg">
+          <p className="text-sm text-gray-600 mb-2"><strong>Stage:</strong> {projectState.stage.replace('_', ' ').toUpperCase()}</p>
+          {projectState.businessIdea && (
+            <p className="text-sm text-gray-600"><strong>Idea:</strong> {projectState.businessIdea.substring(0, 100)}...</p>
+          )}
+        </div>
+      </div>
+
+      {projectState.competitors && projectState.competitors.length > 0 && (
+        <div>
+          <h4 className="font-medium text-gray-700 mb-3">🏢 Competitors</h4>
+          <div className="space-y-2">
+            {projectState.competitors.slice(0, 5).map((competitor: any, i: number) => (
+              <div key={i} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                <span className="text-sm font-medium">{competitor.name}</span>
+                <div className="flex items-center space-x-2">
+                  <div className="w-16 bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-red-500 h-2 rounded-full" 
+                      style={{ width: `${competitor.strength || 70}%` }}
+                    ></div>
+                  </div>
+                  <span className="text-xs text-gray-500">{Math.round(competitor.strength || 70)}%</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {projectState.mvpFeatures && projectState.mvpFeatures.length > 0 && (
+        <div>
+          <h4 className="font-medium text-gray-700 mb-3">⚡ MVP Features</h4>
+          <div className="space-y-2">
+            {projectState.mvpFeatures.slice(0, 5).map((feature: any, i: number) => (
+              <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div>
+                  <span className="text-sm font-medium">{feature.name}</span>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <span className={`text-xs px-2 py-1 rounded-full ${
+                      feature.priority === 'high' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
+                    }`}>
+                      {feature.priority}
+                    </span>
+                    <span className="text-xs text-gray-500">{feature.effort}d effort</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div>
+        <h4 className="font-medium text-gray-700 mb-3">💬 Conversation Stats</h4>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-blue-50 p-3 rounded-lg text-center">
+            <div className="text-2xl font-bold text-blue-600">{messages.length}</div>
+            <div className="text-xs text-blue-600">Messages</div>
+          </div>
+          <div className="bg-green-50 p-3 rounded-lg text-center">
+            <div className="text-2xl font-bold text-green-600">{Math.round(messages.length / 2)}</div>
+            <div className="text-xs text-green-600">Insights</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 interface Message {
   role: 'user' | 'assistant';
@@ -180,8 +264,66 @@ export default function DevbrainAppResponsive() {
     }
   };
 
-  const handleQuickAction = (text: string) => {
+  const handleQuickAction = async (text: string) => {
     setInputValue(text);
+    
+    // Auto-send the message
+    const userMessage: Message = {
+      role: 'user',
+      content: text,
+      timestamp: new Date()
+    };
+    
+    setMessages(prev => [...prev, userMessage]);
+    setInputValue('');
+    setIsLoading(true);
+    
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3002';
+      const response = await fetch(`${apiUrl}/api/ai/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: text,
+          context: messages
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        const assistantMessage: Message = {
+          role: 'assistant',
+          content: data.data.content,
+          timestamp: new Date()
+        };
+        
+        setMessages(prev => [...prev, assistantMessage]);
+        
+        // Extract and update visualization data
+        extractVisualizationData(data.data.content);
+        
+        // Update business idea if this is the first substantial message
+        if (!projectState.businessIdea && text.length > 20) {
+          setProjectState(prev => ({
+            ...prev,
+            businessIdea: text
+          }));
+        }
+      } else {
+        throw new Error(data.error || 'Failed to get response');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      const errorMessage: Message = {
+        role: 'assistant',
+        content: 'Failed to connect to AI service. Please check the backend is running.',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -329,7 +471,7 @@ export default function DevbrainAppResponsive() {
           
           {/* Visual Intelligence Panel */}
           <div className="w-96 bg-white border-l border-gray-200 overflow-y-auto">
-            <VisualizationCanvas
+            <SimpleVisualization
               projectState={projectState}
               messages={messages}
             />
@@ -424,7 +566,7 @@ export default function DevbrainAppResponsive() {
             </div>
           ) : (
             <div className="flex-1 bg-white overflow-y-auto">
-              <VisualizationCanvas
+              <SimpleVisualization
                 projectState={projectState}
                 messages={messages}
               />
