@@ -15,7 +15,9 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
   process.env.FRONTEND_URL,
-  'https://devbrain-ai.vercel.app' // We'll use this domain
+  'https://devbrain-ai.vercel.app',
+  'https://devbrain-ai-bilal-bims-projects.vercel.app',
+  'https://devbrain-ai-git-main-bilal-bims-projects.vercel.app'
 ].filter(Boolean);
 
 app.use(cors({
